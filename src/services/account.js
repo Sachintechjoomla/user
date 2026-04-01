@@ -97,16 +97,6 @@ module.exports = class AccountHelper {
 				})
 			}
 
-			const phonePresent = bodyData.phone != null && String(bodyData.phone).trim() !== ''
-			const phoneCodePresent = bodyData.phone_code != null && String(bodyData.phone_code).trim() !== ''
-			if (phonePresent && !phoneCodePresent) {
-				return responses.failureResponse({
-					message: 'PHONE_CODE_REQUIRED_WHEN_PHONE_PROVIDED',
-					statusCode: httpStatusCode.bad_request,
-					responseCode: 'CLIENT_ERROR',
-				})
-			}
-
 			let domainDetails = null
 
 			if (bodyData.registration_code) {
