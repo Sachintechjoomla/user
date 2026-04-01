@@ -97,6 +97,16 @@ module.exports = class AccountHelper {
 				})
 			}
 
+			const phonePresent = bodyData.phone != null && String(bodyData.phone).trim() !== ''
+			const phoneCodePresent = bodyData.phone_code != null && String(bodyData.phone_code).trim() !== ''
+			if (phonePresent && !phoneCodePresent) {
+				return responses.failureResponse({
+					message: 'PHONE_CODE_REQUIRED_WHEN_PHONE_PROVIDED',
+					statusCode: httpStatusCode.bad_request,
+					responseCode: 'CLIENT_ERROR',
+				})
+			}
+
 			let domainDetails = null
 
 			if (bodyData.registration_code) {
@@ -1113,7 +1123,7 @@ module.exports = class AccountHelper {
 			// Send SMS notification with OTP if phone is provided
 			if (user.phone) {
 				notificationUtils.sendSMSNotification({
-					phoneNumber: emailEncryption.decrypt(user.phone),
+					phoneNumber: emailEncryption.decryptPhone(user.phone, user.phone_code),
 					templateCode: process.env.OTP_EMAIL_TEMPLATE_CODE,
 					variables: { app_name: tenantDetail.name, otp },
 					tenantCode: tenantDetail.code,
@@ -1781,7 +1791,9 @@ module.exports = class AccountHelper {
 					id: userId,
 					username: user?.username || null,
 					email: user?.email ? emailEncryption.decrypt(user?.email) : user?.email || null,
-					phone: user?.phone ? emailEncryption.decrypt(user?.phone) : user?.phone || null,
+					phone: user?.phone
+						? emailEncryption.decryptPhone(user?.phone, user?.phone_code)
+						: user?.phone || null,
 				},
 			})
 
@@ -1959,7 +1971,7 @@ module.exports = class AccountHelper {
 						user.email = emailEncryption.decrypt(user.email)
 					}
 					if (user.phone) {
-						user.phone = emailEncryption.decrypt(user.phone)
+						user.phone = emailEncryption.decryptPhone(user.phone, user.phone_code)
 					}
 					return user
 				})

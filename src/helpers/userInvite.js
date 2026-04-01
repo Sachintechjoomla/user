@@ -630,7 +630,7 @@ module.exports = class UserInviteHelper {
 				}
 
 				let encryptedPhoneNumber = ''
-				if (invitee?.phone) {
+				if (invitee?.phone && invitee?.phone_code) {
 					encryptedPhoneNumber = emailEncryption.encrypt(invitee?.phone)
 				}
 				prunedEntities.forEach((entity) => {
@@ -954,7 +954,7 @@ module.exports = class UserInviteHelper {
 								oldValues.email = emailEncryption.decrypt(oldValues.email)
 							}
 							if (oldValues?.phone) {
-								oldValues.phone = emailEncryption.decrypt(oldValues.phone)
+								oldValues.phone = emailEncryption.decryptPhone(oldValues.phone, oldValues.phone_code)
 							}
 							if (Object.keys(newValues).length > 0) {
 								const eventBody = eventBodyDTO({
