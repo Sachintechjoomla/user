@@ -9,10 +9,14 @@
  */
 const setKey = async function (key, value, exp) {
 	value = JSON.stringify(value)
-	const result = await redisClient.set(key, value, {
-		// NX: true, // Only set the key if it does not already exist.
-		EX: exp,
-	})
+	const expSec = Number(exp)
+	const options =
+		Number.isFinite(expSec) && expSec > 0
+			? {
+					EX: Math.floor(expSec),
+			  }
+			: {}
+	const result = await redisClient.set(key, value, options)
 	return result
 }
 

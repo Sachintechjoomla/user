@@ -1082,15 +1082,16 @@ module.exports = class AccountHelper {
 
 			const userData = await utilsHelper.redisGet(user.username)
 
-			const [otp, isNew] =
-				userData && userData.action === 'forgetpassword'
-					? [userData.otp, false]
-					: [utils.generateSecureOTP(), true]
+			const existingValidForgetOtp =
+				userData && userData.action === 'forgetpassword' && typeof userData.issuedAt === 'number'
+
+			const [otp, isNew] = existingValidForgetOtp ? [userData.otp, false] : [utils.generateSecureOTP(), true]
 			if (isNew) {
 				const redisData = {
 					verify: user.username,
 					action: 'forgetpassword',
 					otp,
+					issuedAt: Date.now(),
 				}
 				const res = await utilsHelper.redisSet(user.username, redisData, common.otpExpirationTime)
 				if (res !== 'OK')
@@ -1421,7 +1422,17 @@ module.exports = class AccountHelper {
 			}
 
 			const redisData = await utilsHelper.redisGet(user.username)
-			if (!redisData || redisData.otp != bodyData.otp) {
+			if (!redisData || redisData.action !== 'forgetpassword' || redisData.otp != bodyData.otp) {
+				return responses.failureResponse({
+					message: 'RESET_OTP_INVALID',
+					statusCode: httpStatusCode.bad_request,
+					responseCode: 'CLIENT_ERROR',
+				})
+			}
+
+			const otpTtlMs = common.otpExpirationTime * 1000
+			if (typeof redisData.issuedAt !== 'number' || Date.now() - redisData.issuedAt > otpTtlMs) {
+				await utilsHelper.redisDel(user.username)
 				return responses.failureResponse({
 					message: 'RESET_OTP_INVALID',
 					statusCode: httpStatusCode.bad_request,

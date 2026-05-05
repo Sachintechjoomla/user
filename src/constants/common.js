@@ -39,7 +39,8 @@ module.exports = {
 	refreshTokenExpiry: `${process.env.REFRESH_TOKEN_EXPIRY}d`,
 	refreshTokenExpiryInMs: Number(process.env.REFRESH_TOKEN_EXPIRY) * 24 * 60 * 60 * 1000,
 	refreshTokenLimit: 3,
-	otpExpirationTime: process.env.OTP_EXP_TIME, // In Seconds,
+	// OTP TTL in seconds; align with frontend (e.g. 60s). Env must be numeric; default avoids missing TTL on Redis keys.
+	otpExpirationTime: Number(process.env.OTP_EXP_TIME) > 0 ? Number(process.env.OTP_EXP_TIME) : 60,
 	ADMIN_ROLE: 'admin',
 	TENANT_ADMIN_ROLE: 'tenant_admin',
 	ORG_ADMIN_ROLE: 'org_admin',
