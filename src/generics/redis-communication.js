@@ -10,12 +10,12 @@
 const setKey = async function (key, value, exp) {
 	value = JSON.stringify(value)
 	const expSec = Number(exp)
-	const options =
-		Number.isFinite(expSec) && expSec > 0
-			? {
-					EX: Math.floor(expSec),
-			  }
-			: {}
+	let options = {}
+	if (Number.isFinite(expSec) && expSec > 0) {
+		// Avoid EX: 0 (invalid in Redis): sub-second values must become at least 1s.
+		const ttlSeconds = Math.max(1, Math.ceil(expSec))
+		options = { EX: ttlSeconds }
+	}
 	const result = await redisClient.set(key, value, options)
 	return result
 }

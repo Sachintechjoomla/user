@@ -1085,22 +1085,23 @@ module.exports = class AccountHelper {
 			const existingValidForgetOtp =
 				userData && userData.action === 'forgetpassword' && typeof userData.issuedAt === 'number'
 
-			const [otp, isNew] = existingValidForgetOtp ? [userData.otp, false] : [utils.generateSecureOTP(), true]
-			if (isNew) {
-				const redisData = {
-					verify: user.username,
-					action: 'forgetpassword',
-					otp,
-					issuedAt: Date.now(),
-				}
-				const res = await utilsHelper.redisSet(user.username, redisData, common.otpExpirationTime)
-				if (res !== 'OK')
-					return responses.failureResponse({
-						message: 'UNABLE_TO_SEND_OTP',
-						statusCode: httpStatusCode.internal_server_error,
-						responseCode: 'SERVER_ERROR',
-					})
+			const otp = existingValidForgetOtp ? userData.otp : utils.generateSecureOTP()
+			const reusedOtp = Boolean(existingValidForgetOtp)
+
+			// Refresh Redis TTL and issuedAt on every send (including resend) so the user gets a full window.
+			const redisData = {
+				verify: user.username,
+				action: 'forgetpassword',
+				otp,
+				issuedAt: Date.now(),
 			}
+			const res = await utilsHelper.redisSet(user.username, redisData, common.otpExpirationTime)
+			if (res !== 'OK')
+				return responses.failureResponse({
+					message: 'UNABLE_TO_SEND_OTP',
+					statusCode: httpStatusCode.internal_server_error,
+					responseCode: 'SERVER_ERROR',
+				})
 			if (user.email) {
 				notificationUtils.sendEmailNotification({
 					emailId: emailEncryption.decrypt(user.email),
@@ -1122,7 +1123,7 @@ module.exports = class AccountHelper {
 				})
 			}
 
-			if (process.env.APPLICATION_ENV === 'development') console.log('DEV OTP->', { otp, isNew })
+			if (process.env.APPLICATION_ENV === 'development') console.log('DEV OTP->', { otp, reusedOtp })
 			return responses.successResponse({
 				statusCode: httpStatusCode.ok,
 				message: 'OTP_SENT_SUCCESSFULLY',
